@@ -1,0 +1,145 @@
+// ============================================
+// WARDROBE SERVER — Prisma Schema
+// PostgreSQL via Supabase with full relational
+// model for users, closet, trips, and outfits
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- User Profile & Color Season ----
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  name            String
+  gender          String?
+  bodyType        String?   @map("body_type")
+  height          String?
+  weight          String?
+  skinTone        String?   @map("skin_tone")
+  undertone       String?
+  colorSeason     String?   @map("color_season")
+  avatar          String?   @default("👤")
+  onboardingDone  Boolean   @default(false) @map("onboarding_done")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  closetItems     ClosetItem[]
+  outfits         Outfit[]
+  trips           Trip[]
+  shoppingItems   ShoppingItem[]
+
+  @@map("users")
+}
+
+// ---- Digital Closet Items ----
+model ClosetItem {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  name            String
+  brand           String
+  category        String
+  color           String    // Hex code
+  colorName       String    @map("color_name")
+  seasonTags      String[]  @map("season_tags")
+  formality       Int       @default(3)
+  weatherMin      Int       @default(5) @map("weather_min")
+  weatherMax      Int       @default(28) @map("weather_max")
+  rainResistant   Boolean   @default(false) @map("rain_resistant")
+  snowResistant   Boolean   @default(false) @map("snow_resistant")
+  imageUrl        String?   @map("image_url")
+  sourceType      String    @default("Manual Upload") @map("source_type")
+  size            String?
+  price           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outfitPieces    OutfitPiece[]
+
+  @@index([userId])
+  @@index([userId, category])
+  @@map("closet_items")
+}
+
+// ---- Saved Outfits / Lookbook ----
+model Outfit {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  occasion        String
+  weather         String
+  city            String?
+  temperature     Int?
+  commentary      String?   @db.Text
+  generatedAt     DateTime  @default(now()) @map("generated_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pieces          OutfitPiece[]
+
+  @@index([userId])
+  @@map("outfits")
+}
+
+model OutfitPiece {
+  id              String    @id @default(uuid()) @db.Uuid
+  outfitId        String    @map("outfit_id") @db.Uuid
+  closetItemId    String    @map("closet_item_id") @db.Uuid
+  slot            String    // top, bottom, outerwear, footwear, accessory, dress
+
+  outfit          Outfit    @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  closetItem      ClosetItem @relation(fields: [closetItemId], references: [id], onDelete: Cascade)
+
+  @@map("outfit_pieces")
+}
+
+// ---- Travel Trips & Packing Checklists ----
+model Trip {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  destination     String
+  tripType        String    @map("trip_type")
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime  @map("end_date") @db.Date
+  numDays         Int       @map("num_days")
+  climateProfile  Json?     @map("climate_profile")  // { avgTemp, condition, precipitation, humidity, windSpeed }
+  wardrobeOutfits Json?     @map("wardrobe_outfits") // Day-by-day outfit formulas
+  activityGear    Json?     @map("activity_gear")    // Checklist items with checked state
+  essentials      Json?                              // Checklist items with checked state
+  gapWarnings     Json?     @map("gap_warnings")     // Missing critical items
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trips")
+}
+
+// ---- Smart Shopping List ----
+model ShoppingItem {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  name            String
+  brand           String
+  category        String
+  color           String
+  colorName       String    @map("color_name")
+  price           String?
+  reason          String?   @db.Text
+  affiliateUrl    String?   @map("affiliate_url")
+  store           String?
+  gapType         String    @default("daily") @map("gap_type") // 'travel' or 'daily'
+  purchased       Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, gapType])
+  @@map("shopping_items")
+}
