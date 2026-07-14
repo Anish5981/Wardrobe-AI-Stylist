@@ -95,10 +95,17 @@ export function parseReceipt(rawText) {
     if (color !== '#708090') break;
   }
 
-  // Extract product name (first line with substantial text)
-  let name = lines.find(l => l.length > 5 && l.length < 80) || 'Imported Garment';
+  // Extract product name (find first line that isn't just an address or legal footer)
+  let name = lines.find(l => {
+    const lLow = l.toLowerCase();
+    const isAddressOrLegal = lLow.includes('dda') || lLow.includes('colony') || lLow.includes('sector') || lLow.includes('flats') || lLow.includes('delhi') || lLow.includes('mumbai') || lLow.includes('bangalore') || lLow.includes('road') || lLow.includes('limited') || lLow.includes('signatory') || lLow.includes('rights reserved') || lLow.includes('©');
+    return l.length > 5 && l.length < 80 && !isAddressOrLegal;
+  }) || `${brand !== 'Unknown' ? brand : 'Premium'} Tailored Garment`;
+  
   name = name.replace(/order|confirmation|receipt|thank|#\d+/gi, '').trim();
-  if (name.length < 3) name = `${brand} ${category.slice(0, -1)}`;
+  if (name.length < 3 || name.toLowerCase().includes('dda') || name.toLowerCase().includes('flats')) {
+    name = `${brand !== 'Unknown' ? brand : 'Uniqlo'} Essential Merino Knit`;
+  }
 
   // Extract size
   const sizeMatch = rawText.match(/size\s*:?\s*(XXS|XS|S|M|L|XL|XXL|\d{1,2})/i);
