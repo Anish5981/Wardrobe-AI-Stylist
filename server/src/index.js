@@ -70,6 +70,15 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // --- Health Check Endpoint ---
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Welcome to Wardrobe AI Stylist API — Live on Render Cloud!',
+    health: '/api/health',
+    endpoints: ['/api/auth', '/api/closet', '/api/outfits', '/api/travel', '/api/shopping', '/api/ingestion'],
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
