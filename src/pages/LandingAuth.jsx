@@ -269,6 +269,9 @@ export default function LandingAuth() {
       <style>{`
         .landing {
           min-height: 100vh;
+          background: var(--color-bg);
+          color: var(--color-charcoal);
+          transition: background-color 0.3s ease, color 0.3s ease;
         }
         .landing-hero {
           position: relative;
@@ -276,7 +279,7 @@ export default function LandingAuth() {
           display: flex;
           align-items: center;
           overflow: hidden;
-          background: linear-gradient(160deg, #FAFAFA 0%, #F0F0F0 50%, #E8E4DF 100%);
+          background: linear-gradient(160deg, var(--color-bg) 0%, var(--color-bg-alt) 50%, var(--color-surface) 100%);
         }
         .landing-hero-inner {
           position: relative;
