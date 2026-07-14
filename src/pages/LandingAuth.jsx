@@ -40,6 +40,14 @@ export default function LandingAuth() {
     });
   };
 
+  const handleSupabaseGoogleLogin = async () => {
+    try {
+      await actions.loginWithSupabaseGoogle();
+    } catch (err) {
+      alert('To use live Supabase Google OAuth redirect, make sure your Google Client ID is configured in your Supabase Auth providers dashboard! Using quick login mode fallback.');
+    }
+  };
+
   const features = [
     { icon: Shirt, title: 'Digital Closet', desc: 'Your entire wardrobe, organized and AI-analyzed' },
     { icon: Sparkles, title: 'AI Outfit Engine', desc: 'Weather-aware daily styling at your fingertips' },
@@ -206,6 +214,19 @@ export default function LandingAuth() {
               </svg>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#202124', marginBottom: 6 }}>Choose an account</h3>
               <p style={{ fontSize: '0.875rem', color: '#5F6368', margin: 0 }}>to continue to <strong>Wardrobe AI Stylist</strong></p>
+            </div>
+
+            <button
+              style={{ width: '100%', padding: '14px 20px', borderRadius: 8, background: '#1A73E8', color: '#FFFFFF', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer', transition: 'all 0.2s', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 6px rgba(26,115,232,0.3)' }}
+              onClick={handleSupabaseGoogleLogin}
+            >
+              ⚡ Sign in with Google (Real OAuth Redirect)
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 20px', color: '#9AA0A6' }}>
+              <div style={{ flex: 1, height: 1, background: '#E8EAED' }} />
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>or quick select demo account</span>
+              <div style={{ flex: 1, height: 1, background: '#E8EAED' }} />
             </div>
 
             <div className="flex flex-col gap-sm" style={{ marginBottom: 24 }}>

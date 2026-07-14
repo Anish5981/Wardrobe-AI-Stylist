@@ -7,6 +7,7 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import { CLOSET_ITEMS, SHOPPING_RECOMMENDATIONS, DEMO_USERS } from '../data/mockData';
 import { api } from '../services/api';
+import { supabase, signInWithGoogle as startSupabaseGoogleOAuth } from '../services/supabase';
 
 const WardrobeContext = createContext(null);
 
@@ -151,6 +152,30 @@ export function WardrobeProvider({ children }) {
     }
   }, [state]);
 
+  // Listen for Supabase Google OAuth redirect authentication
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        const u = session.user;
+        const userData = {
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Google User',
+          avatar: u.user_metadata?.avatar_url || '🇬',
+          persona: 'Supabase Google',
+          onboardingDone: true,
+        };
+        if (session.access_token) {
+          localStorage.setItem('wardrobe_token', session.access_token);
+        }
+        dispatch({ type: 'LOGIN', payload: userData });
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'LOGOUT' });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const hasApiToken = () => !!localStorage.getItem('wardrobe_token');
 
   const actions = {
@@ -244,8 +269,18 @@ export function WardrobeProvider({ children }) {
       }
     },
 
-    logout: () => {
+    loginWithSupabaseGoogle: async () => {
+      try {
+        await startSupabaseGoogleOAuth();
+      } catch (err) {
+        console.error('Supabase Google OAuth initialization failed:', err);
+        throw err;
+      }
+    },
+
+    logout: async () => {
       localStorage.removeItem('wardrobe_token');
+      try { await supabase.auth.signOut(); } catch (e) { /* ignore */ }
       dispatch({ type: 'LOGOUT' });
     },
 
