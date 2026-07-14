@@ -53,9 +53,18 @@ export default function Navbar() {
         {/* User & Controls */}
         <div className="navbar-actions">
           {state.user && (
-            <button className="navbar-user" onClick={() => actions.setPage('onboarding')}>
-              <span className="navbar-avatar">{state.user.avatar || '👤'}</span>
-              <span className="navbar-username hide-mobile">{state.user.name?.split(' ')[0]}</span>
+            <button className="navbar-user" onClick={() => actions.setPage('onboarding')} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {typeof state.user.avatar === 'string' && (state.user.avatar.startsWith('http://') || state.user.avatar.startsWith('https://')) ? (
+                <img
+                  src={state.user.avatar}
+                  alt={state.user.name || 'User'}
+                  style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--color-border)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <span className="navbar-avatar">{state.user.avatar || '👤'}</span>
+              )}
+              <span className="navbar-username hide-mobile">{state.user.name?.split(' ')[0] || 'Stylist'}</span>
             </button>
           )}
           <button className="btn-icon navbar-logout hide-mobile" onClick={actions.logout} title="Sign Out">
