@@ -45,14 +45,32 @@ function wardrobeReducer(state, action) {
     case 'SET_PAGE':
       return { ...state, currentPage: action.payload };
 
-    case 'LOGIN':
+    case 'LOGIN': {
+      const existing = state.user || {};
+      const mergedUser = { ...existing, ...action.payload };
+      
+      // Preserve saved style profile attributes if the incoming auth payload doesn't include them
+      if (existing.colorSeason && !action.payload.colorSeason) {
+        mergedUser.colorSeason = existing.colorSeason;
+        mergedUser.gender = existing.gender || mergedUser.gender;
+        mergedUser.bodyType = existing.bodyType || mergedUser.bodyType;
+        mergedUser.height = existing.height || mergedUser.height;
+        mergedUser.weight = existing.weight || mergedUser.weight;
+        mergedUser.skinTone = existing.skinTone || mergedUser.skinTone;
+        mergedUser.undertone = existing.undertone || mergedUser.undertone;
+      }
+      
+      const hasCompletedStyleProfile = !!(mergedUser.colorSeason || existing.colorSeason || state.onboardingComplete);
+      const nextView = hasCompletedStyleProfile && (state.currentPage === 'onboarding' || !state.currentPage) ? 'closet' : (state.currentPage || (hasCompletedStyleProfile ? 'closet' : 'onboarding'));
+      
       return {
         ...state,
         isAuthenticated: true,
-        user: action.payload,
-        currentPage: action.payload.colorSeason ? 'closet' : 'onboarding',
-        onboardingComplete: !!action.payload.colorSeason,
+        user: mergedUser,
+        currentPage: nextView,
+        onboardingComplete: hasCompletedStyleProfile,
       };
+    }
 
     case 'LOGOUT':
       return { ...defaultState };
@@ -286,6 +304,17 @@ export function WardrobeProvider({ children }) {
 
     completeOnboarding: async (data) => {
       dispatch({ type: 'COMPLETE_ONBOARDING', payload: data });
+      try {
+        const nextState = {
+          ...state,
+          user: { ...state.user, ...data },
+          onboardingComplete: true,
+          currentPage: 'closet',
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+      } catch (err) {
+        console.warn('Local storage write warning:', err);
+      }
       if (hasApiToken()) {
         try {
           await api.auth.updateProfile(data);
