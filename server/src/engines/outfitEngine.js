@@ -4,7 +4,7 @@
 // conditions, occasion, and closet inventory
 // ============================================
 
-import { scoreGarmentColor } from './colorSeasonEngine';
+import { scoreGarmentColor } from './colorSeasonEngine.js';
 
 /**
  * Generate a complete outfit ensemble from owned closet items.

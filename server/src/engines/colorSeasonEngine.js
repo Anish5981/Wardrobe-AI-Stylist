@@ -4,7 +4,7 @@
 // master seasonal palettes and scores garments
 // ============================================
 
-import { COLOR_SEASONS } from '../data/mockData';
+import { COLOR_SEASONS } from '../data/mockData.js';
 
 /**
  * Determine the user's color season based on skin tone and undertone.

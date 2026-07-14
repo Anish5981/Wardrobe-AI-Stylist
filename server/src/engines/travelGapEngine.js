@@ -5,7 +5,7 @@
 // inventory to detect missing critical items
 // ============================================
 
-import { TRIP_TYPES, CLIMATE_DATA } from '../data/mockData';
+import { TRIP_TYPES, CLIMATE_DATA } from '../data/mockData.js';
 
 /**
  * Generate a complete travel checklist with outfit formulas,

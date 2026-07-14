@@ -4,7 +4,7 @@
 // simulation for manual garment uploads
 // ============================================
 
-import { CATEGORIES } from '../data/mockData';
+import { CATEGORIES } from '../data/mockData.js';
 
 // ---- Brand & Category Keywords ----
 const BRAND_KEYWORDS = [
@@ -52,6 +52,10 @@ const COLOR_KEYWORDS = {
  * @param {string} rawText - Raw email receipt content
  * @returns {object} Parsed garment data
  */
+export function parseReceiptText(rawText) {
+  return parseReceipt(rawText);
+}
+
 export function parseReceipt(rawText) {
   if (!rawText || rawText.trim().length < 10) {
     return { success: false, error: 'Receipt text is too short to parse' };
