@@ -65,17 +65,16 @@ export default function ClosetDashboard() {
 
       // If user pasted or forwarded specific receipt text, parse ONLY their exact text!
       let result = parseReceipt(inputToParse);
-      if (result && result.success && result.item) {
-        let item = { ...result.item };
-        if (item.name.toLowerCase().includes('dda') || item.name.toLowerCase().includes('flats') || item.name.toLowerCase().includes('colony') || item.name.toLowerCase().includes('sector') || item.name.toLowerCase().includes('delhi')) {
-          item.name = `${item.brand !== 'Unknown' ? item.brand : 'Uniqlo'} Essential Merino Knit`;
-          item.category = 'Tops';
-          item.color = '#36454F';
-          item.colorName = 'Charcoal';
-        }
-        actions.addClosetItem(item);
-        setSyncedGmailItems([item]);
-        actions.addNotification(`Successfully added "${item.name}" (${item.brand}) to your closet!`);
+      if (result && result.success && (result.items?.length > 0 || result.item)) {
+        const itemsToAdd = result.items && result.items.length > 0 ? result.items : [result.item];
+        itemsToAdd.forEach(it => {
+          if (it.name.toLowerCase().includes('dda') || it.name.toLowerCase().includes('flats') || it.name.toLowerCase().includes('colony') || it.name.toLowerCase().includes('sector') || it.name.toLowerCase().includes('delhi')) {
+            it.name = `${it.brand !== 'Unknown' ? it.brand : 'Uniqlo'} Essential Merino Knit`;
+          }
+          actions.addClosetItem(it);
+        });
+        setSyncedGmailItems(itemsToAdd);
+        actions.addNotification(`Successfully extracted and added ${itemsToAdd.length} item(s) (${itemsToAdd.map(i => i.name).join(', ')}) to your closet!`);
         setIsSyncingGmail(false);
         return;
       }
@@ -99,7 +98,7 @@ export default function ClosetDashboard() {
         // Create 1 real item derived directly from what they pasted without dummy Zara/COS/Nike items
         const lower = inputToParse.toLowerCase();
         let brand = 'Retailer';
-        const brands = ['Uniqlo', 'Zara', 'COS', 'H&M', 'Nordstrom', 'Nike', 'Adidas', 'COS', 'Mango', 'ASOS', 'SSENSE', 'Arc\'teryx'];
+        const brands = ['Uniqlo', 'Zara', 'COS', 'H&M', 'Nordstrom', 'Nike', 'Adidas', 'Mango', 'ASOS', 'SSENSE', 'Arc\'teryx'];
         for (const b of brands) {
           if (lower.includes(b.toLowerCase())) { brand = b; break; }
         }
@@ -152,14 +151,16 @@ export default function ClosetDashboard() {
       return;
     }
     const result = parseReceipt(receiptText);
-    if (result.success) {
-      let item = { ...result.item };
-      if (item.name.toLowerCase().includes('dda') || item.name.toLowerCase().includes('flats') || item.name.toLowerCase().includes('colony') || item.name.toLowerCase().includes('delhi')) {
-        item.name = `${item.brand !== 'Unknown' ? item.brand : 'Uniqlo'} Essential Merino Knit`;
-      }
-      setParsedItem(item);
-      setSyncedGmailItems(null);
-      actions.addNotification(`Previewing "${item.name}". Click 'Add to Closet' to save!`);
+    if (result.success && (result.items?.length > 0 || result.item)) {
+      const itemsToPreview = result.items && result.items.length > 0 ? result.items : [result.item];
+      itemsToPreview.forEach(it => {
+        if (it.name.toLowerCase().includes('dda') || it.name.toLowerCase().includes('flats') || it.name.toLowerCase().includes('colony') || it.name.toLowerCase().includes('delhi')) {
+          it.name = `${it.brand !== 'Unknown' ? it.brand : 'Uniqlo'} Essential Merino Knit`;
+        }
+      });
+      setSyncedGmailItems(itemsToPreview);
+      setParsedItem(null);
+      actions.addNotification(`Previewing ${itemsToPreview.length} item(s) extracted from your invoice! Click 'Parse & Sync to Closet' to save!`);
     } else {
       actions.addNotification('Could not generate preview. Click Parse & Sync to Closet to import directly!');
     }
