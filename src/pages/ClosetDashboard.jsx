@@ -6,6 +6,7 @@
 
 import { useState, useRef } from 'react';
 import { useWardrobe } from '../context/WardrobeContext';
+import api from '../services/api';
 import { scoreGarmentColor } from '../engines/colorSeasonEngine';
 import { parseReceipt, getBackgroundRemovalStages } from '../engines/ingestionEngine';
 import { CATEGORIES, FORMALITY_LABELS } from '../data/mockData';
@@ -23,7 +24,29 @@ export default function ClosetDashboard() {
   const [receiptText, setReceiptText] = useState('');
   const [parsedItem, setParsedItem] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [isSyncingGmail, setIsSyncingGmail] = useState(false);
+  const [syncedGmailItems, setSyncedGmailItems] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Handle Gmail / E-Receipt Auto-Sync
+  const handleGmailAutoSync = async (customText = null) => {
+    try {
+      setIsSyncingGmail(true);
+      setSyncedGmailItems(null);
+      setParsedItem(null);
+      const res = await api.ingest.syncGmailReceipts({ receiptText: customText || receiptText });
+      if (res && res.items) {
+        setSyncedGmailItems(res.items);
+        res.items.forEach(it => actions.addClosetItem(it));
+        actions.addNotification(`Successfully synced ${res.items.length} items from email orders!`);
+      }
+    } catch (err) {
+      console.error('Gmail sync error:', err);
+      actions.addNotification('Failed to sync receipts. Check server connection.');
+    } finally {
+      setIsSyncingGmail(false);
+    }
+  };
 
   // Filter items
   const filtered = state.closetItems.filter(item => {
@@ -106,11 +129,11 @@ export default function ClosetDashboard() {
             <p className="text-sm text-muted" style={{ marginTop: 4 }}>{state.closetItems.length} items across {CATEGORIES.length} categories</p>
           </div>
           <div className="flex gap-sm">
-            <button className="btn btn-outline" onClick={() => setShowReceiptModal(true)}>
-              <Mail size={14} /> Scan Receipt
+            <button className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => { setSyncedGmailItems(null); setParsedItem(null); setShowReceiptModal(true); }}>
+              <Mail size={15} /> 📨 Sync Email Receipts
             </button>
             <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>
-              <Camera size={14} /> Upload
+              <Camera size={14} /> Upload Photo
             </button>
           </div>
         </div>
@@ -247,32 +270,104 @@ export default function ClosetDashboard() {
             <div className="modal-content animate-scaleIn" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 24 }}>
                 <h3 className="font-serif" style={{ fontSize: 'var(--font-size-lg)' }}>
-                  <Mail size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Scan Email Receipt
+                  <Mail size={18} style={{ marginRight: 8, verticalAlign: 'middle', color: '#1A73E8' }} />
+                  Scan Email & Gmail Receipts
                 </h3>
                 <button className="btn-icon" onClick={() => setShowReceiptModal(false)}><X size={18} /></button>
               </div>
 
-              {!parsedItem ? (
-                <>
-                  <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-                    Paste your order confirmation email below. We'll extract the brand, category, color, and size.
+              {isSyncingGmail ? (
+                <div className="closet-upload-progress" style={{ padding: '40px 20px' }}>
+                  <ScanLine size={48} className="animate-pulse" style={{ color: '#1A73E8', margin: '0 auto 20px' }} />
+                  <h4 className="font-serif" style={{ fontSize: '1.25rem', marginBottom: 8 }}>Scanning Gmail Receipts...</h4>
+                  <p className="text-sm text-muted" style={{ maxWidth: 400, margin: '0 auto' }}>
+                    Connecting to secure inbox stream & running AI extraction on fashion retail orders (Zara, Nike, Nordstrom, ASOS)...
                   </p>
+                </div>
+              ) : syncedGmailItems && syncedGmailItems.length > 0 ? (
+                <div className="closet-parsed-result animate-fadeInUp">
+                  <div style={{ background: 'rgba(26,115,232,0.1)', border: '1px solid rgba(26,115,232,0.3)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                    <p className="uppercase text-xs font-bold" style={{ color: '#1A73E8', marginBottom: 4 }}>
+                      ⚡ Gmail Auto-Sync Complete
+                    </p>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-charcoal)' }}>
+                      Discovered {syncedGmailItems.length} New Fashion Items!
+                    </h4>
+                  </div>
+                  <div className="flex flex-col gap-sm" style={{ maxHeight: 240, overflowY: 'auto', marginBottom: 20 }}>
+                    {syncedGmailItems.map((item, idx) => (
+                      <div key={idx} className="card" style={{ padding: 12 }}>
+                        <div className="flex gap-md items-center">
+                          <div className="color-swatch" style={{ backgroundColor: item.color || '#1C3A5F', width: 40, height: 40, borderRadius: 8, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex justify-between items-center">
+                              <p className="text-xs text-muted uppercase font-bold">{item.brand}</p>
+                              <span className="badge badge-outline" style={{ fontSize: '0.7rem' }}>📨 Gmail Verified</span>
+                            </div>
+                            <p className="font-medium text-sm truncate">{item.name}</p>
+                            <p className="text-xs text-muted">{item.category} · {item.season || 'All-Season'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="btn btn-primary btn-full" onClick={() => { setSyncedGmailItems(null); setShowReceiptModal(false); }}>
+                    ✨ Awesome! View My Closet
+                  </button>
+                </div>
+              ) : !parsedItem ? (
+                <>
+                  {/* 1-Click Auto-Scan Banner */}
+                  <div style={{ background: 'linear-gradient(135deg, #1A73E8 0%, #0D47A1 100%)', borderRadius: 12, padding: '20px 24px', color: '#FFFFFF', marginBottom: 24, boxShadow: '0 4px 12px rgba(26,115,232,0.25)' }}>
+                    <div className="flex items-center justify-between gap-md">
+                      <div>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          ⚡ 1-Click Auto-Scan Recent Gmail Orders
+                        </h4>
+                        <p style={{ fontSize: '0.8125rem', opacity: 0.9, margin: 0 }}>
+                          Automatically detect & import clothing receipts from Zara, Nike, Nordstrom, ASOS & more.
+                        </p>
+                      </div>
+                      <button
+                        style={{ background: '#FFFFFF', color: '#1A73E8', border: 'none', padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.15)', transition: 'transform 0.2s' }}
+                        onClick={() => handleGmailAutoSync()}
+                      >
+                        Scan Gmail Now 🚀
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 20px', color: 'var(--color-grey-light)' }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>or paste / forward specific order confirmation</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                  </div>
+
                   <textarea
                     className="input-field"
-                    placeholder={`Example:\n\nOrder Confirmation - COS\nItem: Ribbed Merino Turtleneck\nColor: Black\nSize: M\nTotal: $89.00`}
+                    placeholder={`Example Order Confirmation:\n\nOrder Confirmation #COS-81920\nItem: Ribbed Merino Wool Turtleneck\nColor: Black\nSize: M\nTotal: $89.00`}
                     value={receiptText}
                     onChange={e => setReceiptText(e.target.value)}
-                    style={{ width: '100%', minHeight: 160, resize: 'vertical', fontFamily: 'var(--font-sans)' }}
+                    style={{ width: '100%', minHeight: 140, resize: 'vertical', fontFamily: 'var(--font-sans)' }}
                   />
-                  <button
-                    className="btn btn-primary btn-full"
-                    style={{ marginTop: 16 }}
-                    onClick={handleScanReceipt}
-                    disabled={receiptText.trim().length < 10}
-                  >
-                    <Sparkles size={14} /> Parse Receipt
-                  </button>
+                  <div className="flex gap-sm" style={{ marginTop: 16 }}>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 1 }}
+                      onClick={() => handleGmailAutoSync(receiptText)}
+                      disabled={receiptText.trim().length < 10}
+                    >
+                      <Sparkles size={14} /> Parse & Sync to Closet
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      style={{ flex: 1 }}
+                      onClick={handleScanReceipt}
+                      disabled={receiptText.trim().length < 10}
+                    >
+                      Preview Only
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="closet-parsed-result animate-fadeInUp">

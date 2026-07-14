@@ -164,6 +164,10 @@ export const api = {
         body: formData,
       });
     },
+    syncGmailReceipts: (options = {}) => fetchClient('/ingest/gmail-sync', {
+      method: 'POST',
+      body: JSON.stringify(options),
+    }),
   },
 };
 
