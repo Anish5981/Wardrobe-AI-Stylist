@@ -106,6 +106,67 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// ---- POST /api/auth/google ----
+// Continue with Google: find or create account
+router.post('/google', async (req, res, next) => {
+  try {
+    const { email, name, avatar, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Google account email is required',
+      });
+    }
+
+    // Check if user already exists
+    let user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        onboardingDone: true,
+        createdAt: true,
+      },
+    });
+
+    // If new user from Google, create account with placeholder OAuth password
+    if (!user) {
+      const randomPassword = 'google_oauth_' + Math.random().toString(36).substring(2, 15);
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: name || email.split('@')[0],
+          passwordHash,
+          avatar: avatar || '🇬',
+          onboardingDone: false,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatar: true,
+          onboardingDone: true,
+          createdAt: true,
+        },
+      });
+    }
+
+    const token = generateToken(user);
+
+    res.status(200).json({
+      message: 'Google authentication successful',
+      user,
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ---- GET /api/auth/profile ----
 router.get('/profile', authenticate, async (req, res, next) => {
   try {

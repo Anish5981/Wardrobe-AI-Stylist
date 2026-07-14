@@ -61,6 +61,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
+    google: (userData) => fetchClient('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    }),
     getProfile: () => fetchClient('/auth/profile'),
     updateProfile: (updates) => fetchClient('/auth/profile', {
       method: 'PUT',

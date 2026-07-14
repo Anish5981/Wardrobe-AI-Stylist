@@ -197,6 +197,53 @@ export function WardrobeProvider({ children }) {
       }
     },
 
+    loginWithGoogle: async (googleData) => {
+      try {
+        const res = await api.auth.google(googleData);
+        if (res?.token) {
+          localStorage.setItem('wardrobe_token', res.token);
+        }
+        dispatch({ type: 'LOGIN', payload: res.user || googleData });
+
+        // Attempt to sync cloud data after Google sign in
+        if (res?.token) {
+          try {
+            const [closetRes, outfitsRes, tripsRes, shoppingRes] = await Promise.allSettled([
+              api.closet.getAll(),
+              api.outfits.getAll(),
+              api.travel.getAll(),
+              api.shopping.getAll(),
+            ]);
+            if (closetRes.status === 'fulfilled' && closetRes.value?.items?.length > 0) {
+              dispatch({ type: 'SET_CLOSET_ITEMS', payload: closetRes.value.items });
+            }
+            if (outfitsRes.status === 'fulfilled' && outfitsRes.value?.outfits?.length > 0) {
+              dispatch({ type: 'SET_SAVED_OUTFITS', payload: outfitsRes.value.outfits });
+            }
+            if (tripsRes.status === 'fulfilled' && tripsRes.value?.trips?.length > 0) {
+              dispatch({ type: 'SET_TRIPS', payload: tripsRes.value.trips });
+            }
+            if (shoppingRes.status === 'fulfilled' && shoppingRes.value?.items?.length > 0) {
+              dispatch({ type: 'SET_SHOPPING_LIST', payload: shoppingRes.value.items });
+            }
+          } catch (e) {
+            console.warn('Cloud sync after Google sign in failed:', e);
+          }
+        }
+      } catch (err) {
+        console.warn('API Google sign in fallback to offline/demo:', err);
+        dispatch({ type: 'LOGIN', payload: {
+          id: `google_${Date.now()}`,
+          name: googleData.name || googleData.email.split('@')[0],
+          email: googleData.email,
+          persona: 'Google OAuth',
+          avatar: googleData.avatar || '🇬',
+          colorSeason: 'True Winter',
+          onboardingDone: false,
+        }});
+      }
+    },
+
     logout: () => {
       localStorage.removeItem('wardrobe_token');
       dispatch({ type: 'LOGOUT' });
